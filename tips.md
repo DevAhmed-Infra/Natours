@@ -41,3 +41,82 @@ app.use((err, req, res, next) => {
 // 9. Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on ${PORT}`));
+
+
+
+//Note 
+
+3️⃣ PUT example (FULL replace)
+Request
+PUT /users/1
+
+
+Body:
+
+{
+  "name": "Ahmed Ali",
+  "email": "ahmed.ali@mail.com",
+  "age": 23
+}
+
+ExpressJS controller
+router.put("/users/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const user = await User.findByIdAndUpdate(
+    id,
+    req.body,
+    {
+      new: true,
+      overwrite: true // ⚠️ FULL replacement
+    }
+  );
+
+  res.json(user);
+});
+
+Result
+{
+  "name": "Ahmed Ali",
+  "email": "ahmed.ali@mail.com",
+  "age": 23
+}
+
+
+✔ Entire document replaced
+✔ Any missing field → removed
+
+4️⃣ PATCH example (PARTIAL update)
+Request
+PATCH /users/1
+
+
+Body:
+
+{
+  "age": 24
+}
+
+ExpressJS controller
+router.patch("/users/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const user = await User.findByIdAndUpdate(
+    id,
+    { $set: req.body },
+    { new: true }
+  );
+
+  res.json(user);
+});
+
+Result
+{
+  "name": "Ahmed",
+  "email": "ahmed@mail.com",
+  "age": 24
+}
+
+
+✔ Only age changed
+✔ Other fields preserved
