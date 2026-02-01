@@ -4,18 +4,28 @@ const Tour = require("../models/tourModel");
 const httpStatus = require("../utils/httpStatus");
 
 const getAllTours = asyncHandler(async (req, res) => {
-
   const queryObj = { ...req.query };
-  const excludedFields = ["page", "sort", "limit", "fields"];
-  excludedFields.forEach((el) => delete queryObj[el]);
 
-  const tours = await Tour.find(queryObj);
+  const mongoQuery = {};
 
-  return res.status(200).json({
+  Object.keys(queryObj).forEach((key) => {
+    const operatorMatch = key.match(/(.+)\[(gte|gt|lte|lt)\]/);
+    if (operatorMatch) {
+      const field = operatorMatch[1]; 
+      const operator = operatorMatch[2]; 
+      mongoQuery[field] = { [`$${operator}`]: Number(queryObj[key]) };
+    } else {
+      mongoQuery[key] = queryObj[key];
+    }
+  });
+
+
+  const tours = await Tour.find(mongoQuery);
+
+  res.status(200).json({
     status: httpStatus.SUCCESS,
-    data: {
-      tours: tours,
-    },
+    results: tours.length,
+    data: { tours },
   });
 });
 
