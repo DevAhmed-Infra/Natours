@@ -1,6 +1,6 @@
 const express = require('express');
 const morgan = require('morgan');
-
+const httpStatus = require('../Natours/utils/httpStatus')
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 
@@ -27,5 +27,12 @@ app.use((req, res, next) => {
 // 3) ROUTES
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
+
+app.use((err, req, res, next) => {
+  res.status(err.statusCode || 500).json({
+    status: httpStatus.ERROR,
+    message: err.message,
+  });
+});
 
 module.exports = app;
