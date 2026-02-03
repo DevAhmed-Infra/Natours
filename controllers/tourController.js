@@ -3,6 +3,13 @@ const asyncHandler = require("express-async-handler");
 const Tour = require("../models/tourModel");
 const httpStatus = require("../utils/httpStatus");
 
+const aliasTopTours = (req, res, next) => {
+  req.aliasLimit = 5;
+  req.aliasSort = "-ratingsAverage,price";
+  req.aliasFields = "name,price,ratingsAverage,summary,difficulty";
+  next();
+};
+
 const getAllTours = asyncHandler(async (req, res) => {
   const queryObj = { ...req.query };
 
@@ -27,9 +34,10 @@ const getAllTours = asyncHandler(async (req, res) => {
   let query = Tour.find(mongoQuery);
 
   // sorting
-
-  if (req.query.sort) {
-    const sortBy = req.query.sort.split(",").join(" ");
+  // Use alias sort from middleware if available, otherwise use req.query.sort
+  const sortValue = req.aliasSort || req.query.sort;
+  if (sortValue) {
+    const sortBy = sortValue.split(",").join(" ");
     console.log(sortBy);
     query = query.sort(sortBy);
   } else {
@@ -37,12 +45,26 @@ const getAllTours = asyncHandler(async (req, res) => {
   }
 
   // field limiting
-
-  if (req.query.fields) {
-    const fields = req.query.fields.split(",").join(" ");
+  const fieldsValue = req.aliasFields || req.query.fields;
+  if (fieldsValue) {
+    const fields = fieldsValue.split(",").join(" ");
     query = query.select(fields);
   } else {
     query = query.select("-__v");
+  }
+
+  // pagination
+  const page = req.query.page * 1 || 1;
+  const limit = req.aliasLimit || (req.query.limit ? req.query.limit * 1 : 100);
+  const skip = (page - 1) * limit;
+
+  query = query.skip(skip).limit(limit);
+
+  if (req.query.page) {
+    const numTours = await Tour.countDocuments();
+    if (skip >= numTours) {
+      throw new Error("Limit exceeded");
+    }
   }
 
   const tours = await query;
@@ -105,4 +127,5 @@ module.exports = {
   createTour,
   updateTour,
   deleteTour,
+  aliasTopTours,
 };
