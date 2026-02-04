@@ -1,8 +1,10 @@
 const asyncHandler = require("express-async-handler");
+const { validationResult } = require("express-validator");
 
 const Tour = require("../models/tourModel");
 const httpStatus = require("../utils/httpStatus");
 const APIFeatures = require("../utils/apiFeatures");
+const AppError = require("../utils/appError");
 
 const aliasTopTours = (req, res, next) => {
   req.aliasLimit = 5;
@@ -70,7 +72,7 @@ const aliasTopTours = (req, res, next) => {
 //   });
 // });
 
-const getAllTours = asyncHandler(async (req, res) => {
+const getAllTours = asyncHandler(async (req, res, next) => {
   const features = new APIFeatures(Tour.find(), req.query, {
     limit: req.aliasLimit,
     sort: req.aliasSort,
@@ -83,6 +85,10 @@ const getAllTours = asyncHandler(async (req, res) => {
 
   const tours = await features.query;
 
+  if (tours.length === 0) {
+    return next(AppError.create("There is no tours", 404));
+  }
+
   res.status(200).json({
     status: httpStatus.SUCCESS,
     results: tours.length,
@@ -90,8 +96,13 @@ const getAllTours = asyncHandler(async (req, res) => {
   });
 });
 
-const getTour = asyncHandler(async (req, res) => {
+const getTour = asyncHandler(async (req, res, next) => {
   const tour = await Tour.findById(req.params.id);
+
+  if (!tour) {
+    const errors = AppError.create("There is no tour", 404);
+    return next(errors);
+  }
 
   return res.status(200).json({
     status: httpStatus.SUCCESS,
@@ -101,7 +112,18 @@ const getTour = asyncHandler(async (req, res) => {
   });
 });
 
-const createTour = asyncHandler(async (req, res) => {
+const createTour = asyncHandler(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = AppError.create(
+      errors
+        .array()
+        .map((err) => err.msg)
+        .join(", "),
+      400,
+    );
+    return next(error);
+  }
   const newTour = await Tour.create(req.body);
   return res.status(201).json({
     status: httpStatus.SUCCESS,
@@ -111,11 +133,16 @@ const createTour = asyncHandler(async (req, res) => {
   });
 });
 
-const updateTour = asyncHandler(async (req, res) => {
+const updateTour = asyncHandler(async (req, res, next) => {
   const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
   });
+
+  if (!updatedTour) {
+    const errors = AppError.create("updates are not commited", 404);
+    return next(errors);
+  }
 
   return res.status(200).json({
     status: httpStatus.SUCCESS,
@@ -127,11 +154,15 @@ const updateTour = asyncHandler(async (req, res) => {
 
 const deleteTour = asyncHandler(async (req, res) => {
   const id = req.params.id;
-  await Tour.findByIdAndDelete(id);
+  const tour = await Tour.findByIdAndDelete(id);
+  if (!tour) {
+    const errors = AppError.create("No tour found with that ID", 404);
+    return next(errors);
+  }
 
-  return res.status(200).json({
+  return res.status(204).json({
     status: httpStatus.SUCCESS,
-    data: {},
+    data: null,
   });
 });
 
