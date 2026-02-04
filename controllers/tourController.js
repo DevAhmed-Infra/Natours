@@ -6,6 +6,9 @@ const httpStatus = require("../utils/httpStatus");
 const APIFeatures = require("../utils/apiFeatures");
 const AppError = require("../utils/appError");
 
+// ============================================
+// MIDDLEWARE: Alias Top Tours
+// ============================================
 const aliasTopTours = (req, res, next) => {
   req.aliasLimit = 5;
   req.aliasSort = "-ratingsAverage,price";
@@ -73,177 +76,208 @@ const aliasTopTours = (req, res, next) => {
 // });
 
 const getAllTours = asyncHandler(async (req, res, next) => {
-  const features = new APIFeatures(Tour.find(), req.query, {
-    limit: req.aliasLimit,
-    sort: req.aliasSort,
-    fields: req.aliasFields,
-  })
-    .filter()
-    .sort()
-    .limitFields()
-    .paginate();
+    const features = new APIFeatures(Tour.find(), req.query, {
+      limit: req.aliasLimit,
+      sort: req.aliasSort,
+      fields: req.aliasFields,
+    })
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
 
-  const tours = await features.query;
+    const tours = await features.query;
 
-  if (tours.length === 0) {
-    return next(AppError.create("There is no tours", 404));
-  }
+    if (tours.length === 0) {
+      const error = AppError.create("There are no tours", 404);
+      return next(error);
+    }
 
-  res.status(200).json({
-    status: httpStatus.SUCCESS,
-    results: tours.length,
-    data: { tours },
-  });
+    res.status(200).json({
+      status: httpStatus.SUCCESS,
+      results: tours.length,
+      data: { tours },
+    });
+ 
 });
 
+// ============================================
+// CONTROLLER: Get Single Tour
+// ============================================
 const getTour = asyncHandler(async (req, res, next) => {
-  const tour = await Tour.findById(req.params.id);
+  
+    const tour = await Tour.findById(req.params.id);
 
-  if (!tour) {
-    const errors = AppError.create("There is no tour", 404);
-    return next(errors);
-  }
+    if (!tour) {
+      const error = AppError.create("No tour found with that ID", 404);
+      return next(error);
+    }
 
-  return res.status(200).json({
-    status: httpStatus.SUCCESS,
-    data: {
-      tour: tour,
-    },
-  });
-});
-
-const createTour = asyncHandler(async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const error = AppError.create(
-      errors
-        .array()
-        .map((err) => err.msg)
-        .join(", "),
-      400,
-    );
-    return next(error);
-  }
-  const newTour = await Tour.create(req.body);
-  return res.status(201).json({
-    status: httpStatus.SUCCESS,
-    data: {
-      tour: newTour,
-    },
-  });
-});
-
-const updateTour = asyncHandler(async (req, res, next) => {
-  const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!updatedTour) {
-    const errors = AppError.create("updates are not commited", 404);
-    return next(errors);
-  }
-
-  return res.status(200).json({
-    status: httpStatus.SUCCESS,
-    data: {
-      tour: updatedTour,
-    },
-  });
-});
-
-const deleteTour = asyncHandler(async (req, res) => {
-  const id = req.params.id;
-  const tour = await Tour.findByIdAndDelete(id);
-  if (!tour) {
-    const errors = AppError.create("No tour found with that ID", 404);
-    return next(errors);
-  }
-
-  return res.status(204).json({
-    status: httpStatus.SUCCESS,
-    data: null,
-  });
-});
-
-const getTourStats = async (req, res) => {
-  const stats = await Tour.aggregate([
-    {
-      $match: { ratingsAverage: { $gte: 4.5 } },
-    },
-    {
-      $group: {
-        _id: { $toUpper: "$difficulty" },
-        numTours: { $sum: 1 },
-        numRatings: { $sum: "$ratingsQuantity" },
-        avgRating: { $avg: "$ratingsAverage" },
-        avgPrice: { $avg: "$price" },
-        minPrice: { $min: "$price" },
-        maxPrice: { $max: "$price" },
+    res.status(200).json({
+      status: httpStatus.SUCCESS,
+      data: {
+        tour: tour,
       },
-    },
-    {
-      $sort: { avgPrice: 1 },
-    },
-    // {
-    //   $match: { _id: { $ne: 'EASY' } }
-    // }
-  ]);
+    });
+  
+});
 
-  res.status(200).json({
-    status: "success",
-    data: {
-      stats,
-    },
-  });
-};
+// ============================================
+// CONTROLLER: Create Tour
+// ============================================
+const createTour = asyncHandler(async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const error = AppError.create(
+        errors
+          .array()
+          .map((err) => err.msg)
+          .join(", "),
+        400
+      );
+      return next(error);
+    }
 
-const getMonthlyPlan = async (req, res) => {
-  const year = req.params.year * 1; // 2021
+    const newTour = await Tour.create(req.body);
 
-  const plan = await Tour.aggregate([
-    {
-      $unwind: "$startDates",
-    },
-    {
-      $match: {
-        startDates: {
-          $gte: new Date(`${year}-01-01`),
-          $lte: new Date(`${year}-12-31`),
+    res.status(201).json({
+      status: httpStatus.SUCCESS,
+      data: {
+        tour: newTour,
+      },
+    });
+
+});
+
+// ============================================
+// CONTROLLER: Update Tour
+// ============================================
+const updateTour = asyncHandler(async (req, res, next) => {
+  
+    const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedTour) {
+      const error = AppError.create("No tour found with that ID", 404);
+      return next(error);
+    }
+
+    res.status(200).json({
+      status: httpStatus.SUCCESS,
+      data: {
+        tour: updatedTour,
+      },
+    });
+  
+});
+
+// ============================================
+// CONTROLLER: Delete Tour
+// ============================================
+const deleteTour = asyncHandler(async (req, res, next) => {
+    const tour = await Tour.findByIdAndDelete(req.params.id);
+
+    if (!tour) {
+      const error = AppError.create("No tour found with that ID", 404);
+      return next(error);
+    }
+
+    res.status(204).json({
+      status: httpStatus.SUCCESS,
+      data: null,
+    });
+ 
+});
+
+// ============================================
+// CONTROLLER: Get Tour Statistics
+// ============================================
+const getTourStats = asyncHandler(async (req, res, next) => {
+    const stats = await Tour.aggregate([
+      {
+        $match: { ratingsAverage: { $gte: 4.5 } },
+      },
+      {
+        $group: {
+          _id: { $toUpper: "$difficulty" },
+          numTours: { $sum: 1 },
+          numRatings: { $sum: "$ratingsQuantity" },
+          avgRating: { $avg: "$ratingsAverage" },
+          avgPrice: { $avg: "$price" },
+          minPrice: { $min: "$price" },
+          maxPrice: { $max: "$price" },
         },
       },
-    },
-    {
-      $group: {
-        _id: { $month: "$startDates" },
-        numTourStarts: { $sum: 1 },
-        tours: { $push: "$name" },
+      {
+        $sort: { avgPrice: 1 },
       },
-    },
-    {
-      $addFields: { month: "$_id" },
-    },
-    {
-      $project: {
-        _id: 0,
+    ]);
+
+    res.status(200).json({
+      status: httpStatus.SUCCESS,
+      data: {
+        stats,
       },
-    },
-    {
-      $sort: { numTourStarts: -1 },
-    },
-    {
-      $limit: 12,
-    },
-  ]);
+    });
+  
+});
 
-  res.status(200).json({
-    status: "success",
-    data: {
-      plan,
-    },
-  });
-};
+// ============================================
+// CONTROLLER: Get Monthly Plan
+// ============================================
+const getMonthlyPlan = asyncHandler(async (req, res, next) => {
+  
+    const year = req.params.year * 1;
 
+    const plan = await Tour.aggregate([
+      {
+        $unwind: "$startDates",
+      },
+      {
+        $match: {
+          startDates: {
+            $gte: new Date(`${year}-01-01`),
+            $lte: new Date(`${year}-12-31`),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $month: "$startDates" },
+          numTourStarts: { $sum: 1 },
+          tours: { $push: "$name" },
+        },
+      },
+      {
+        $addFields: { month: "$_id" },
+      },
+      {
+        $project: {
+          _id: 0,
+        },
+      },
+      {
+        $sort: { numTourStarts: -1 },
+      },
+      {
+        $limit: 12,
+      },
+    ]);
+
+    res.status(200).json({
+      status: httpStatus.SUCCESS,
+      data: {
+        plan,
+      },
+    });
+  
+});
+
+// ============================================
+// EXPORTS
+// ============================================
 module.exports = {
   getAllTours,
   getTour,
