@@ -6,9 +6,7 @@ const httpStatus = require("../utils/httpStatus");
 const APIFeatures = require("../utils/apiFeatures");
 const AppError = require("../utils/appError");
 
-// ============================================
-// MIDDLEWARE: Alias Top Tours
-// ============================================
+
 const aliasTopTours = (req, res, next) => {
   req.aliasLimit = 5;
   req.aliasSort = "-ratingsAverage,price";
@@ -101,9 +99,7 @@ const getAllTours = asyncHandler(async (req, res, next) => {
  
 });
 
-// ============================================
-// CONTROLLER: Get Single Tour
-// ============================================
+
 const getTour = asyncHandler(async (req, res, next) => {
   
     const tour = await Tour.findById(req.params.id);
@@ -122,9 +118,7 @@ const getTour = asyncHandler(async (req, res, next) => {
   
 });
 
-// ============================================
-// CONTROLLER: Create Tour
-// ============================================
+
 const createTour = asyncHandler(async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -149,9 +143,7 @@ const createTour = asyncHandler(async (req, res, next) => {
 
 });
 
-// ============================================
-// CONTROLLER: Update Tour
-// ============================================
+
 const updateTour = asyncHandler(async (req, res, next) => {
   
     const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
@@ -173,9 +165,7 @@ const updateTour = asyncHandler(async (req, res, next) => {
   
 });
 
-// ============================================
-// CONTROLLER: Delete Tour
-// ============================================
+
 const deleteTour = asyncHandler(async (req, res, next) => {
     const tour = await Tour.findByIdAndDelete(req.params.id);
 
@@ -191,9 +181,6 @@ const deleteTour = asyncHandler(async (req, res, next) => {
  
 });
 
-// ============================================
-// CONTROLLER: Get Tour Statistics
-// ============================================
 const getTourStats = asyncHandler(async (req, res, next) => {
     const stats = await Tour.aggregate([
       {
@@ -224,9 +211,7 @@ const getTourStats = asyncHandler(async (req, res, next) => {
   
 });
 
-// ============================================
-// CONTROLLER: Get Monthly Plan
-// ============================================
+
 const getMonthlyPlan = asyncHandler(async (req, res, next) => {
   
     const year = req.params.year * 1;
@@ -275,9 +260,7 @@ const getMonthlyPlan = asyncHandler(async (req, res, next) => {
   
 });
 
-// ============================================
-// EXPORTS
-// ============================================
+
 module.exports = {
   getAllTours,
   getTour,

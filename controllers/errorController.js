@@ -1,59 +1,67 @@
-const httpStatus = require('../utils/httpStatus');
-const AppError = require('../utils/appError');
+const AppError = require("./../utils/appError");
+const httpStatus = require("../utils/httpStatus");
 
-// ============================================
-// ERROR HANDLER: MongoDB Duplicate Key Error
-// ============================================
-const handleDuplicateKeyError = (err) => {
-  const field = Object.keys(err.keyPattern)[0];
-  const value = err.keyValue[field];
-  const message = `${field.charAt(0).toUpperCase() + field.slice(1)} "${value}" already exists. Please use another value!`;
+const handleCastErrorDB = (err) => {
+  const message = `Invalid ${err.path}: ${err.value}.`;
   return AppError.create(message, 400);
 };
 
-// ============================================
-// ERROR HANDLER: Mongoose Validation Error
-// ============================================
-const handleValidationError = (err) => {
-  const errors = Object.values(err.errors).map(el => el.message);
-  const message = `Invalid input data. ${errors.join('. ')}`;
+const handleDuplicateFieldsDB = (err) => {
+  const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
+  console.log(value);
+
+  const message = `Duplicate field value: ${value}. Please use another value!`;
+  return AppError.create(message, 400);
+};
+const handleValidationErrorDB = (err) => {
+  const errors = Object.values(err.errors).map((el) => el.message);
+
+  const message = `Invalid input data. ${errors.join(". ")}`;
   return AppError.create(message, 400);
 };
 
-// ============================================
-// GLOBAL ERROR HANDLER MIDDLEWARE
-// ============================================
-const globalErrorHandler = (err, req, res, next) => {
-  // Set default status code
-  err.statusCode = err.statusCode || 500;
-
-  // Handle MongoDB E11000 duplicate key error
-  if (err.code === 11000) {
-    err = handleDuplicateKeyError(err);
-  }
-
-  // Handle Mongoose validation errors
-  if (err.name === 'ValidationError') {
-    err = handleValidationError(err);
-  }
-
-  // Set status text based on status code or use provided status
-  if (err.statusText) {
-    err.status = err.statusText;
-  } else if (err.status) {
-    err.status = err.status;
-  } else {
-    err.status = `${err.statusCode}`.startsWith('4') 
-      ? httpStatus.FAIL 
-      : httpStatus.ERROR;
-  }
-
-  // Send error response
+const sendErrorDev = (err, res) => {
   res.status(err.statusCode).json({
     status: err.status,
+    error: err,
     message: err.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    stack: err.stack,
   });
 };
+
+const sendErrorProd = (err, res) => {
+  if (err.isOperational) {
+    res.status(err.statusCode).json({
+      status: err.status,
+      message: err.message,
+    });
+  } else {
+    console.error("ERROR ", err);
+
+    res.status(500).json({
+      status: httpStatus.ERROR,
+      message: "Something went very wrong!",
+    });
+  }
+};
+
+const globalErrorHandler = (err, req, res, next) => {
+  err.statusCode = err.statusCode || 500;
+  err.status = err.status || httpStatus.ERROR;
+
+  if (process.env.NODE_ENV === "development") {
+    sendErrorDev(err, res);
+  } else if (process.env.NODE_ENV === "production") {
+    let error = { ...err };
+
+    if (error.name === "CastError") error = handleCastErrorDB(error);
+    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
+    if (error.name === "ValidationError")
+      error = handleValidationErrorDB(error);
+
+    sendErrorProd(error, res);
+  }
+};
+
 
 module.exports = globalErrorHandler;
