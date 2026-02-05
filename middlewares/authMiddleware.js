@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 const AppError = require("../utils/appError");
-const httpStatus = require("../utils/httpStatus");
 
 const verifyToken = (req, res, next) => {
   const authHeader =

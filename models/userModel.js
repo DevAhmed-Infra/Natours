@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const generateToken = require("../utils/generateToken");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -43,5 +45,22 @@ const userSchema = new mongoose.Schema({
     },
   },
 });
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  this.passwordConfirm = undefined; // 🔥 important
+  next();
+});
+
+userSchema.methods.createJWT = (payload) => {
+  return generateToken(payload);
+};
+
+userSchema.methods.comparePassword = async function (candidatePassowrd) {
+  const isMatched = await bcrypt.compare(this.password, candidatePassowrd);
+  return isMatched;
+};
 
 module.exports = mongoose.model("User", userSchema);
