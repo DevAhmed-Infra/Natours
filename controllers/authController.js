@@ -75,7 +75,30 @@ const login = asyncHandler(async (req, res, next) => {
   });
 });
 
+
+const forgotPassowrd = asyncHandler(async (req,res,next) => {
+  // 1) find the user needed 
+  const user = await User.findOne({email : req.body.email});
+
+  if(!user){
+    const errors = AppError.create('No user found for this email' , 404);
+  }
+
+  // 2) create a reset token 
+
+  const resetToken = user.createPasswordResetToken();
+  await user.save({validateBeforeSave : false});
+
+  // 3) send it to User email
+})
+
+
+const resetPassword = (req,res,next) => {
+
+}
+
 module.exports = {
   register,
   login,
+  forgotPassowrd
 };
