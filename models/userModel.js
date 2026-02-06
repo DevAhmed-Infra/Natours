@@ -15,6 +15,12 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     validate: [validator.isEmail, "Please provide a valid email"],
   },
+  photo: String,
+  role: {
+    type: String,
+    enum: ["admin", "user", "guide", "lead-guide"],
+    default : 'user'
+  },
   password: {
     type: String,
     required: [true, "Please provide a password"],
@@ -55,12 +61,15 @@ userSchema.pre("save", async function () {
   this.passwordConfirm = undefined;
 });
 
+userSchema.pre("save", function () {
+  if (!this.isModified("password")) return;
+
+  this.passwordChangedAt = Date.now() - 1000;
+});
+
 userSchema.methods.createJWT = function () {
   return generateToken({ id: this._id });
 };
-
-
-
 
 userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {

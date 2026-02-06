@@ -1,6 +1,9 @@
 const express = require("express");
+
 const tourController = require("../controllers/tourController");
-const verifyToken = require('../middlewares/authMiddleware');
+const verifyToken = require("../middlewares/authMiddleware");
+const restrictedTo = require("../middlewares/restrictedTo");
+
 const router = express.Router();
 
 // router.param('id', tourController.checkID);
@@ -14,13 +17,13 @@ router.route("/monthly-plan/:year").get(tourController.getMonthlyPlan);
 
 router
   .route("/")
-  .get(verifyToken ,tourController.getAllTours)
+  .get(verifyToken, tourController.getAllTours)
   .post(tourController.createTour);
 
 router
   .route("/:id")
   .get(tourController.getTour)
   .patch(tourController.updateTour)
-  .delete(tourController.deleteTour);
+  .delete(verifyToken, restrictedTo('admin' , 'lead-guide') ,tourController.deleteTour);
 
 module.exports = router;
