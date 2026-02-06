@@ -29,7 +29,7 @@ const getAllUsers = asyncHandler(async (req, res, next) => {
     })
 });
 
-const deleteMe = catchAsync(async (req, res, next) => {
+const deleteMe = asyncHandler(async (req, res, next) => {
   const id = req.user.id;
   await User.findByIdAndUpdate(id, { active: false });
 
