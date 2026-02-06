@@ -18,7 +18,12 @@ const register = asyncHandler(async (req, res, next) => {
     return next(error);
   }
 
-  const user = await User.create(req.body);
+  const user = await User.create({
+    name: req.body.name,
+    email: req.body.email,
+    password: req.body.password,
+    passwordConfirm: req.body.passwordConfirm,
+  });
 
   const token = user.createJWT();
 
