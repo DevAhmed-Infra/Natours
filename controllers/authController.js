@@ -1,5 +1,6 @@
 const { validationResult } = require("express-validator");
 const asyncHandler = require("express-async-handler");
+const crypto = require("node:crypto");
 
 const User = require("../models/userModel");
 const AppError = require("../utils/appError");
@@ -76,7 +77,7 @@ const login = asyncHandler(async (req, res, next) => {
   });
 });
 
-const forgotPassowrd = asyncHandler(async (req, res, next) => {
+const forgotPassword = asyncHandler(async (req, res, next) => {
   // 1) Validate email is provided
   if (!req.body.email) {
     return next(new AppError("Please provide an email address.", 400));
@@ -100,32 +101,93 @@ const forgotPassowrd = asyncHandler(async (req, res, next) => {
 
   const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
 
-  try {
-    await sendEmail({
-      email: user.email,
-      subject: "Your password reset token (valid for 10 min)",
-      message,
-    });
+  await sendEmail({
+    email: user.email,
+    subject: "Your password reset token (valid for 10 min)",
+    message,
+  });
 
-    res.status(200).json({
-      status: "success",
-      message: "Token sent to email!",
-    });
-  } catch (err) {
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save({ validateBeforeSave: false });
-
-    return next(
-      AppError.create("There was an error sending the email. Try again later!", 500),
-    );
-  }
+  res.status(200).json({
+    status: "success",
+    message: "Token sent to email!",
+  });
 });
 
-const resetPassword = (req, res, next) => {};
+const resetPassword = asyncHandler(async (req, res, next) => {
+  // 1) Get use based on token
+
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  // 2) check if there is no user or token is expired , if not set a new password
+
+  if (!user) {
+    const errors = AppError.create("Token has expired", 400);
+    return next(errors);
+  }
+
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await user.save();
+
+  const token = await user.createJWT();
+
+  return res.status(200).json({
+    status: httpStatus.SUCCESS,
+    token: token,
+    data: {
+      user: user,
+    },
+  });
+});
+
+
+// for logged in Users
+const updatePassword = asyncHandler(async (req, res, next) => {
+  // get user from collection
+  const user = await User.findById(req.user.id).select('+password');
+
+  if (!user) {
+    const errors = AppError.create('User not found', 400);
+    return next(errors);
+  }
+
+  // check if posted current password is correct
+  const isMatched = await user.comparePassword(req.body.passwordCurrent);
+
+  if (!isMatched) {
+    const errors = AppError.create('Current password is not correct', 400);
+    return next(errors);
+  }
+
+  // if so update user
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+
+  await user.save();
+
+  const token = await user.createJWT();
+
+  return res.status(200).json({
+    status: httpStatus.SUCCESS,
+    token: token,
+  });
+});
 
 module.exports = {
   register,
   login,
-  forgotPassowrd,
+  forgotPassword,
+  resetPassword,
+  updatePassword,
 };
