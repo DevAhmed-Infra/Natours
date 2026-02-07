@@ -1,27 +1,31 @@
 const nodemailer = require("nodemailer");
 
 const sendEmail = async (options) => {
-  console.log("Email config:", {
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_PASSWORD ? "***" : "MISSING",
-  });
+  // Validate credentials
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    console.error("Missing email credentials!");
+    console.error("EMAIL_USER:", process.env.EMAIL_USER ? "SET" : "NOT SET");
+    console.error("EMAIL_PASSWORD:", process.env.EMAIL_PASSWORD ? "SET" : "NOT SET");
+    throw new Error("Email configuration incomplete. Check EMAIL_USER and EMAIL_PASSWORD in config.env");
+  }
+
+  // 
+
 
   // 1) Create a transporter
   const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: false, // Use TLS
+    service: "gmail",
     auth: {
-      user: process.env.EMAIL,
+      user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
+    logger: true,
+    debug: true,
   });
 
   // 2) Define the email options
   const mailOptions = {
-    from: "support@natours.com",
+    from: `${process.env.EMAIL_USER}`,
     to: options.email,
     subject: options.subject,
     text: options.message,
@@ -30,7 +34,7 @@ const sendEmail = async (options) => {
   console.log("Sending email to:", options.email);
 
   // 3) Actually send the email
-  try { 
+  try {
     const info = await transporter.sendMail(mailOptions);
     console.log("Email sent successfully:", info);
     return info;
