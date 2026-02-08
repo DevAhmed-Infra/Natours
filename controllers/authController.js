@@ -32,6 +32,16 @@ const register = asyncHandler(async (req, res, next) => {
 
   user.password = undefined;
 
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
+    ),
+    secure: true,
+    httpOnly: true,
+  };
+
+  res.cookie("jwt", token, cookieOptions);
+
   return res.status(201).json({
     status: httpStatus.SUCCESS,
     token: token,
@@ -67,6 +77,16 @@ const login = asyncHandler(async (req, res, next) => {
   const token = await user.createJWT();
 
   user.password = undefined;
+
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
+    ),
+    secure: true,
+    httpOnly: true,
+  };
+
+  res.cookie("jwt", token, cookieOptions);
 
   return res.status(200).json({
     status: httpStatus.SUCCESS,
@@ -142,6 +162,16 @@ const resetPassword = asyncHandler(async (req, res, next) => {
 
   const token = await user.createJWT();
 
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
+    ),
+    secure: true,
+    httpOnly: true,
+  };
+
+  res.cookie("jwt", token, cookieOptions);
+
   return res.status(200).json({
     status: httpStatus.SUCCESS,
     token: token,
@@ -151,14 +181,13 @@ const resetPassword = asyncHandler(async (req, res, next) => {
   });
 });
 
-
 // for logged in Users
 const updatePassword = asyncHandler(async (req, res, next) => {
   // get user from collection
-  const user = await User.findById(req.user.id).select('+password');
+  const user = await User.findById(req.user.id).select("+password");
 
   if (!user) {
-    const errors = AppError.create('User not found', 400);
+    const errors = AppError.create("User not found", 400);
     return next(errors);
   }
 
@@ -166,7 +195,7 @@ const updatePassword = asyncHandler(async (req, res, next) => {
   const isMatched = await user.comparePassword(req.body.passwordCurrent);
 
   if (!isMatched) {
-    const errors = AppError.create('Current password is not correct', 400);
+    const errors = AppError.create("Current password is not correct", 400);
     return next(errors);
   }
 
@@ -177,6 +206,16 @@ const updatePassword = asyncHandler(async (req, res, next) => {
   await user.save();
 
   const token = await user.createJWT();
+
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
+    ),
+    secure: true,
+    httpOnly: true,
+  };
+
+  res.cookie("jwt", token, cookieOptions);
 
   return res.status(200).json({
     status: httpStatus.SUCCESS,
