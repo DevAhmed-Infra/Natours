@@ -35,7 +35,7 @@ const getAllUsers = asyncHandler(async (req, res, next) => {
 
 
 const updateMe = asyncHandler(async (req, res, next) => {
-  // 1) Create error if user POSTs password data
+  // 1️⃣ Block password updates
   if (req.body.password || req.body.passwordConfirm) {
     return next(
       new AppError(
@@ -45,20 +45,30 @@ const updateMe = asyncHandler(async (req, res, next) => {
     );
   }
 
+  // 2️⃣ Get current user
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
 
-  // 2) Filtered out unwanted fields names that are not allowed to be updated
+  // 3️⃣ Filter allowed fields
   const filteredBody = filterObj(req.body, 'name', 'email');
 
-  // 3) Update user document
-  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
-    new: true,
-    runValidators: true
+  // 4️⃣ Mutate document explicitly
+  Object.keys(filteredBody).forEach((key) => {
+    user[key] = filteredBody[key];
   });
 
+  // 5️⃣ Clear passwordConfirm so it doesn't trigger validation
+  user.passwordConfirm = undefined;
+
+  // 6️⃣ Save (runs validators & hooks)
+  await user.save({ validateBeforeSave: false });
+
   res.status(200).json({
-    status: 'success',
+    status: httpStatus.SUCCESS,
     data: {
-      user: updatedUser
+      user
     }
   });
 });
