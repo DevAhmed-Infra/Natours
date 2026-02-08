@@ -6,6 +6,7 @@ const User = require("../models/userModel");
 const AppError = require("../utils/appError");
 const httpStatus = require("../utils/httpStatus");
 const sendEmail = require("../utils/sendEmail");
+const cookieOptions = require("../utils/cookieOptions");
 
 const register = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
@@ -31,14 +32,6 @@ const register = asyncHandler(async (req, res, next) => {
   const token = user.createJWT();
 
   user.password = undefined;
-
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
-    ),
-    secure: true,
-    httpOnly: true,
-  };
 
   res.cookie("jwt", token, cookieOptions);
 
@@ -77,14 +70,6 @@ const login = asyncHandler(async (req, res, next) => {
   const token = await user.createJWT();
 
   user.password = undefined;
-
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
-    ),
-    secure: true,
-    httpOnly: true,
-  };
 
   res.cookie("jwt", token, cookieOptions);
 
@@ -162,14 +147,6 @@ const resetPassword = asyncHandler(async (req, res, next) => {
 
   const token = await user.createJWT();
 
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
-    ),
-    secure: true,
-    httpOnly: true,
-  };
-
   res.cookie("jwt", token, cookieOptions);
 
   return res.status(200).json({
@@ -206,14 +183,6 @@ const updatePassword = asyncHandler(async (req, res, next) => {
   await user.save();
 
   const token = await user.createJWT();
-
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE * 24 * 60 * 60 * 1000,
-    ),
-    secure: true,
-    httpOnly: true,
-  };
 
   res.cookie("jwt", token, cookieOptions);
 
