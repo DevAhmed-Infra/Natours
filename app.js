@@ -2,7 +2,7 @@ const express = require("express");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
-const mongoSanitizer = require("express-mongo-sanitize");
+const mongoSanitize = require("mongo-sanitizer");
 const { xss } = require("express-xss-sanitizer");
 const hpp = require("hpp");
 
@@ -26,7 +26,14 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
-app.use(mongoSanitizer());
+
+// Data sanitization against NoSQL query injection
+app.use((req, res, next) => {
+  req.body = mongoSanitize.sanitize(req.body);
+  req.params = mongoSanitize.sanitize(req.params);
+  next();
+});
+
 app.use(xss());
 app.use(
   hpp({

@@ -138,6 +138,7 @@ const createTour = asyncHandler(async (req, res, next) => {
     imageCover: req.body.imageCover,
     images: req.body.images,
     startDates: req.body.startDates,
+    guides: req.body.guides,
   });
 
   res.status(201).json({
