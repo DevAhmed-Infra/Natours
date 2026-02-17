@@ -1,8 +1,6 @@
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 
-const User = require("./userModel");
-
 const tourSchema = new mongoose.Schema(
   {
     name: {
@@ -12,7 +10,6 @@ const tourSchema = new mongoose.Schema(
       trim: true,
       maxlength: [40, "A tour name must have less or equal then 40 characters"],
       minlength: [10, "A tour name must have more or equal then 10 characters"],
-      // validate: [validator.isAlpha, 'Tour name must only contain characters']
     },
     slug: String,
     duration: {
@@ -117,8 +114,15 @@ tourSchema.virtual("durationWeeks").get(function () {
   return this.duration / 7;
 });
 
+// Virtual populate
+tourSchema.virtual('reviews', {
+  ref: 'Review',
+  foreignField: 'tour',
+  localField: '_id'
+});
+
 // DOCUMENT MIDDLEWARE: runs before .save() and .create()
-tourSchema.pre("save", async function (next) {
+tourSchema.pre("save", function (next) {
   this.slug = slugify(this.name, { lower: true });
 });
 
@@ -142,26 +146,21 @@ tourSchema.pre("save", async function (next) {
 
 // QUERY MIDDLEWARE
 
-tourSchema.pre(/^find/, async function (next) {
-  this.find({ secretTour: { $ne: true } });
-  this.start = Date.now();
-});
-
 tourSchema.pre(/^find/, function (next) {
+  this.find({ secretTour: { $ne: true } });
   this.populate({
     path: "guides",
     select: "-__v -passwordChangedAt",
   });
-
-  next();
+  this.start = Date.now();
 });
 
-tourSchema.post(/^find/, async function (docs, next) {
+tourSchema.post(/^find/, async function (docs) {
   console.log(`Query took ${Date.now() - this.start} milliseconds!`);
 });
 
 // AGGREGATION MIDDLEWARE
-tourSchema.pre("aggregate", async function (next) {
+tourSchema.pre("aggregate", function (next) {
   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
   console.log(this.pipeline());
 });

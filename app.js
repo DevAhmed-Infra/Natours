@@ -10,6 +10,7 @@ const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const tourRouter = require("./routes/tourRoutes");
 const userRouter = require("./routes/userRoutes");
+const reviewRouter = require("./routes/reviewRouter");
 
 const app = express();
 
@@ -29,7 +30,6 @@ app.use(express.json({ limit: "10kb" }));
 
 // Data sanitization against NoSQL query injection
 app.use((req, res, next) => {
-  req.body = mongoSanitize.sanitize(req.body);
   req.params = mongoSanitize.sanitize(req.params);
   next();
 });
@@ -57,6 +57,8 @@ app.use((req, res, next) => {
 
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/:tourId/reviews", reviewRouter);
+app.use("/api/v1/reviews", reviewRouter);
 
 app.use((req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
