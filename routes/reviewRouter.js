@@ -6,9 +6,28 @@ const restrictedTo = require("../middlewares/restrictedTo");
 
 const router = express.Router({ mergeParams: true });
 
+router.use(verifyToken);
+
+
 router
-  .route("/")
+  .route('/')
   .get(reviewController.getAllReviews)
-  .post(verifyToken, restrictedTo("user"), reviewController.createReview);
+  .post(
+    restrictedTo('user'),
+    reviewController.setTourUserIds,
+    reviewController.createReview
+  );
+
+router
+  .route('/:id')
+  .get(reviewController.getReview)
+  .patch(
+    restrictedTo('user', 'admin'),
+    reviewController.updateReview
+  )
+  .delete(
+    restrictedTo('user', 'admin'),
+    reviewController.deleteReview
+  );
 
 module.exports = router;

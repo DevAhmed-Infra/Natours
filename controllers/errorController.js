@@ -7,11 +7,14 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
-  console.log(value);
-
-  const message = `Duplicate field value: ${value}. Please use another value!`;
-  return AppError.create(message, 400);
+  try {
+    const matched = err.errmsg.match(/(["'])(\\?.)*?\1/);
+    const value = matched ? matched[0] : "provided value";
+    const message = `Duplicate field value: ${value}. Please use another value!`;
+    return AppError.create(message, 400);
+  } catch (e) {
+    return AppError.create("Duplicate entry found. Please use another value!", 400);
+  }
 };
 const handleValidationErrorDB = (err) => {
   const errors = Object.values(err.errors).map((el) => el.message);
