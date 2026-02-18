@@ -85,14 +85,16 @@ const login = asyncHandler(async (req, res, next) => {
 const forgotPassword = asyncHandler(async (req, res, next) => {
   // 1) Validate email is provided
   if (!req.body.email) {
-    return next(new AppError("Please provide an email address.", 400));
+    const errors = AppError.create("Please provide an email address.", 400);
+    return next(errors)
   }
 
   // 2) Get user based on POSTed email (with lowercase for case-insensitive matching)
   const user = await User.findOne({ email: req.body.email.toLowerCase() });
 
   if (!user) {
-    return next(new AppError("There is no user with email address.", 404));
+    const errors = AppError.create("There is no user with email address.", 404);
+    return next(errors);
   }
 
   // 3) Generate the random reset token
