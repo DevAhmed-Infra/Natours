@@ -26,7 +26,7 @@ router.delete("/deleteMe", userController.deleteMe);
 router
   .route("/")
   .get(userController.getAllUsers)
-  .post(verifyToken, restrictedTo("admin"), userController.createUserByAdmin);
+  .post(restrictedTo("admin"), userController.createUserByAdmin);
 
 router
   .route("/:id")

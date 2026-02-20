@@ -31,12 +31,12 @@ router
 // /tours-within/233/center/-40,45/unit/mi
 
 router.route("/distances/:latlng/unit/:unit").get(tourController.getDistances);
-
+// Protect all routes below this middleware
+router.use(verifyToken);
 router
   .route("/")
-  .get(verifyToken, tourController.getAllTours)
+  .get(tourController.getAllTours)
   .post(
-    verifyToken,
     restrictedTo("admin", "lead-guide"),
     tourController.createTour,
   );
@@ -45,12 +45,10 @@ router
   .route("/:id")
   .get(tourController.getTour)
   .patch(
-    verifyToken,
     restrictedTo("admin", "lead-guide"),
     tourController.updateTour,
   )
   .delete(
-    verifyToken,
     restrictedTo("admin", "lead-guide"),
     tourController.deleteTour,
   );
