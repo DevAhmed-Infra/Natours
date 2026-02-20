@@ -16,17 +16,18 @@ if (missingEnvVars.length > 0) {
 }
 
 // Connect to MongoDB and start server
+console.log('[MongoDB] Attempting to connect to:', process.env.MONGO_URL.replace(/mongodb\+srv:\/\/(\w+):(.*)@/, 'mongodb+srv://***:***@'));
 mongoose
   .connect(process.env.MONGO_URL)
   .then(() => {
-    console.log("MongoDB connected successfully");
+    console.log('[MongoDB] Connected successfully');
 
     const port = process.env.PORT || 3000;
     app.listen(port, () => {
-      console.log(`App running on port ${port}...`);
+      console.log(`[Server] Running on port ${port}`);
     });
   })
   .catch((err) => {
-    console.error("MongoDB connection failed:", err.message);
+    console.error('[MongoDB] Connection failed:', err.message);
     process.exit(1);
   });

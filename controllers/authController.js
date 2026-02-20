@@ -205,32 +205,41 @@ const updatePassword = asyncHandler(async (req, res, next) => {
 });
 
 const isLoggedIn = asyncHandler(async (req, res, next) => {
+  console.log('[isLoggedIn] Middleware started');
   if (req.cookies.jwt) {
+    console.log('[isLoggedIn] JWT cookie found, verifying...');
     try {
       // 1) verify token
       const decoded = await promisify(jwt.verify)(
         req.cookies.jwt,
         process.env.JWT_SECRET,
       );
+      console.log('[isLoggedIn] JWT verified successfully');
 
       // 2) Check if user still exists
       const currentUser = await User.findById(decoded.id);
+      console.log(`[isLoggedIn] User lookup completed: ${currentUser ? currentUser.name : 'Not found'}`);
       if (!currentUser) {
+        console.log('[isLoggedIn] User not found, proceeding without auth');
         return next();
       }
 
       // 3) Check if user changed password after the token was issued
       if (currentUser.changedPasswordAfter(decoded.iat)) {
+        console.log('[isLoggedIn] User changed password, proceeding without auth');
         return next();
       }
 
       // THERE IS A LOGGED IN USER
+      console.log(`[isLoggedIn] Setting res.locals.user to ${currentUser.name}`);
       res.locals.user = currentUser;
       return next();
     } catch (err) {
+      console.log('[isLoggedIn] JWT verification error:', err.message);
       return next();
     }
   }
+  console.log('[isLoggedIn] No JWT cookie found, proceeding');
   next();
 });
 

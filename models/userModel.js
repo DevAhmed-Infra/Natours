@@ -16,7 +16,10 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     validate: [validator.isEmail, "Please provide a valid email"],
   },
-  photo: String,
+  photo: {
+    type: String,
+    default: "default.jpg",
+  },
   role: {
     type: String,
     enum: ["admin", "user", "guide", "lead-guide"],
@@ -54,11 +57,11 @@ const userSchema = new mongoose.Schema({
   passwordChangedAt: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
-   active: {
+  active: {
     type: Boolean,
     default: true,
-    select: false
-  }
+    select: false,
+  },
 });
 
 userSchema.pre("save", async function () {
@@ -75,7 +78,7 @@ userSchema.pre("save", function () {
   this.passwordChangedAt = Date.now() - 1000;
 });
 
-userSchema.pre(/^find/, function() {
+userSchema.pre(/^find/, function () {
   // this points to the current query
   this.find({ active: { $ne: false } });
 });

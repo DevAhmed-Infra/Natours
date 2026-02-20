@@ -5,17 +5,15 @@ const helmet = require("helmet");
 const mongoSanitize = require("mongo-sanitizer");
 const { xss } = require("express-xss-sanitizer");
 const hpp = require("hpp");
-const path = require('path');
-const cookieParser = require('cookie-parser');
-
+const path = require("path");
+const cookieParser = require("cookie-parser");
 
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const tourRouter = require("./routes/tourRoutes");
 const userRouter = require("./routes/userRoutes");
 const reviewRouter = require("./routes/reviewRouter");
-const viewRouter = require('./routes/viewRouter');
-
+const viewRouter = require("./routes/viewRouter");
 
 const app = express();
 
@@ -59,21 +57,32 @@ app.use(
   }),
 );
 
-app.use(express.static(`${__dirname}/public`));
-
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-app.use('/', viewRouter);
+// Test route for debugging
+app.get("/test", (req, res) => {
+  console.log("Test route hit");
+  res.send("OK - Server is responding");
+});
+
+// Health check for templates
+app.get("/health", (req, res) => {
+  console.log("Health check route hit");
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.use("/", viewRouter);
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/:tourId/reviews", reviewRouter);
 app.use("/api/v1/reviews", reviewRouter);
 
 app.use((req, res, next) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
+  next(AppError.create(`Can't find ${req.originalUrl} on this server`, 404));
 });
 
 app.use(globalErrorHandler);

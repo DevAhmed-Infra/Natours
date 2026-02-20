@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const crypto = require("node:crypto");
+const multer = require("multer");
 
 const httpStatus = require("../utils/httpStatus");
 const AppError = require("../utils/appError");
@@ -7,6 +8,33 @@ const User = require("../models/userModel");
 const filterObj = require("../utils/filterObj");
 const factory = require("./factory");
 
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/img/users");
+  },
+  filename: (req, file, cb) => {
+    const ext = file.mimetype.split("/")[1];
+    cb(null, `user-${req.user.id}-${Date.now()}.${ext}`);
+  },
+});
+
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(AppError.create("Not an image! Please upload only images.", 400), false);
+  }
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
+});
+const uploadUserPhoto = upload.single("photo");
+
+const resizeUserPhoto = (req,res,next) => {
+  
+}
 
 const getMe = (req, res, next) => {
   req.params.id = req.user.id;
@@ -32,6 +60,7 @@ const updateMe = asyncHandler(async (req, res, next) => {
 
   // 3️ Filter allowed fields
   const filteredBody = filterObj(req.body, "name", "email");
+  if(req.file) filteredBody.photo = req.file.filename ;
 
   // 4️ Mutate document explicitly
   Object.keys(filteredBody).forEach((key) => {
@@ -47,7 +76,7 @@ const updateMe = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     status: httpStatus.SUCCESS,
     data: {
-      user,
+      user: user,
     },
   });
 });
@@ -71,7 +100,7 @@ const createUserByAdmin = asyncHandler(async (req, res, next) => {
   if (!name || !email || !password || !role) {
     const error = AppError.create(
       "Please provide name, email, password, and role",
-      400
+      400,
     );
     return next(error);
   }
@@ -81,7 +110,7 @@ const createUserByAdmin = asyncHandler(async (req, res, next) => {
   if (!allowedRoles.includes(role)) {
     const error = AppError.create(
       `Role must be one of: ${allowedRoles.join(", ")}`,
-      400
+      400,
     );
     return next(error);
   }
@@ -89,7 +118,10 @@ const createUserByAdmin = asyncHandler(async (req, res, next) => {
   // 4️ Check if user already exists
   const existingUser = await User.findOne({ email: email.toLowerCase() });
   if (existingUser) {
-    const error = AppError.create("Email already in use. Please use another.", 400);
+    const error = AppError.create(
+      "Email already in use. Please use another.",
+      400,
+    );
     return next(error);
   }
 
@@ -98,7 +130,7 @@ const createUserByAdmin = asyncHandler(async (req, res, next) => {
     name,
     email: email.toLowerCase(),
     password,
-    passwordConfirm: password, 
+    passwordConfirm: password,
     role,
   });
 
@@ -128,5 +160,6 @@ module.exports = {
   updateUser,
   deleteUser,
   getMe,
-  createUserByAdmin
+  createUserByAdmin,
+  uploadUserPhoto,
 };
