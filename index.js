@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 const app = require("./app");
 
 // Validate required environment variables
-const requiredEnvVars = ["MONGO_URL", "JWT_SECRET"];
+const requiredEnvVars = ["MONGO_URL", "JWT_SECRET", "EMAIL_USER", "EMAIL_PASSWORD"];
 const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
 
 if (missingEnvVars.length > 0) {

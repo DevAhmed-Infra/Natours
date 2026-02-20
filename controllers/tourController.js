@@ -177,7 +177,7 @@ const getToursWithin = asyncHandler(async (req, res, next) => {
   });
 
   res.status(200).json({
-    status: "success",
+    status: httpStatus.SUCCESS,
     results: tours.length,
     data: {
       data: tours,

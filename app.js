@@ -5,14 +5,25 @@ const helmet = require("helmet");
 const mongoSanitize = require("mongo-sanitizer");
 const { xss } = require("express-xss-sanitizer");
 const hpp = require("hpp");
+const path = require('path');
+const cookieParser = require('cookie-parser');
+
 
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const tourRouter = require("./routes/tourRoutes");
 const userRouter = require("./routes/userRoutes");
 const reviewRouter = require("./routes/reviewRouter");
+const viewRouter = require('./routes/viewRouter');
+
 
 const app = express();
+
+app.set("view engine", "pug");
+app.set("views", path.join(__dirname, "views"));
+
+app.use(express.static(path.join(__dirname, "public")));
+app.use(helmet());
 
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
@@ -25,8 +36,8 @@ const limiter = rateLimit({
 });
 
 app.use("/api", limiter);
-app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
+app.use(cookieParser());
 
 // Data sanitization against NoSQL query injection
 app.use((req, res, next) => {
@@ -55,6 +66,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/', viewRouter);
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/:tourId/reviews", reviewRouter);
