@@ -1,13 +1,12 @@
 const express = require("express");
-const userController = require("./../controllers/userController");
+const userController = require("../controllers/userController");
 const authController = require("../controllers/authController");
 const verifyToken = require("../middlewares/authMiddleware");
 const restrictedTo = require("../middlewares/restrictedTo");
 
-
 const router = express.Router();
 
-router.post("/register", authController.register);
+router.post("/signup", authController.signup);
 router.post("/login", authController.login);
 router.get("/logout", authController.logout);
 
@@ -18,7 +17,12 @@ router.use(verifyToken);
 
 router.patch("/updateMyPassword", authController.updatePassword);
 router.get("/me", userController.getMe, userController.getUser);
-router.patch("/updateMe", userController.resizeUserPhoto , userController.uploadUserPhoto , userController.updateMe);
+router.patch(
+  "/updateMe",
+  userController.resizeUserPhoto,
+  userController.uploadUserPhoto,
+  userController.updateMe,
+);
 router.delete("/deleteMe", userController.deleteMe);
 
 router

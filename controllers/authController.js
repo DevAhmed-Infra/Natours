@@ -7,10 +7,29 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const AppError = require("../utils/appError");
 const httpStatus = require("../utils/httpStatus");
-const sendEmail = require("../utils/sendEmail");
+const Email = require("../utils/sendEmail");
 const cookieOptions = require("../utils/cookieOptions");
 
-const register = asyncHandler(async (req, res, next) => {
+const createSendToken = async (user, statusCode, res) => {
+  const token = await user.createJWT();
+
+  if (process.env.NODE_ENV === "production") cookieOptions.secure = true;
+
+  res.cookie("jwt", token, cookieOptions);
+
+  // Remove password from output
+  user.password = undefined;
+
+  res.status(statusCode).json({
+    status: httpStatus.SUCCESS,
+    token,
+    data: {
+      user,
+    },
+  });
+};
+
+const signup = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const error = AppError.create(
@@ -31,19 +50,13 @@ const register = asyncHandler(async (req, res, next) => {
     role: req.body.role,
   });
 
-  const token = user.createJWT();
-
   user.password = undefined;
 
-  res.cookie("jwt", token, cookieOptions);
+  const url = `${req.protocol}://${req.get("host")}/me`;
+  console.log(url);
+  await new Email(user, url).sendWelcome();
 
-  return res.status(201).json({
-    status: httpStatus.SUCCESS,
-    token: token,
-    data: {
-      newUser: user,
-    },
-  });
+  createSendToken(user, 201, res);
 });
 
 const login = asyncHandler(async (req, res, next) => {
@@ -69,19 +82,9 @@ const login = asyncHandler(async (req, res, next) => {
     return next(errors);
   }
 
-  const token = await user.createJWT();
-
   user.password = undefined;
 
-  res.cookie("jwt", token, cookieOptions);
-
-  return res.status(200).json({
-    status: httpStatus.SUCCESS,
-    token: token,
-    data: {
-      user: user,
-    },
-  });
+  createSendToken(user, 200, res);
 });
 
 const logout = (req, res) => {
@@ -92,43 +95,77 @@ const logout = (req, res) => {
   res.status(200).json({ status: httpStatus.SUCCESS });
 };
 
-const forgotPassword = asyncHandler(async (req, res, next) => {
-  // 1) Validate email is provided
-  if (!req.body.email) {
-    const errors = AppError.create("Please provide an email address.", 400);
-    return next(errors);
-  }
+// const forgotPassword = asyncHandler(async (req, res, next) => {
+//   // 1) Validate email is provided
+//   if (!req.body.email) {
+//     const errors = AppError.create("Please provide an email address.", 400);
+//     return next(errors);
+//   }
 
-  // 2) Get user based on POSTed email (with lowercase for case-insensitive matching)
-  const user = await User.findOne({ email: req.body.email.toLowerCase() });
+//   // 2) Get user based on POSTed email (with lowercase for case-insensitive matching)
+//   const user = await User.findOne({ email: req.body.email.toLowerCase() });
 
+//   if (!user) {
+//     const errors = AppError.create("There is no user with email address.", 404);
+//     return next(errors);
+//   }
+
+//   // 3) Generate the random reset token
+//   const resetToken = user.createPasswordResetToken();
+//   await user.save({ validateBeforeSave: false });
+
+//   // 4) Send it to user's email
+//   const resetURL = `${req.protocol}://${req.get(
+//     "host",
+//   )}/api/v1/users/resetPassword/${resetToken}`;
+
+//   const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
+
+//   // await sendEmail({
+//   //   email: user.email,
+//   //   subject: "Your password reset token (valid for 10 min)",
+//   //   message,
+//   // });
+
+//   res.status(200).json({
+//     status: httpStatus.SUCCESS,
+//     message: "Token sent to email!",
+//   });
+// });
+
+const forgotPassword = async (req, res, next) => {
+  // 1) Get user based on POSTed email
+  const user = await User.findOne({ email: req.body.email });
   if (!user) {
-    const errors = AppError.create("There is no user with email address.", 404);
-    return next(errors);
+    return next(AppError.create("There is no user with email address.", 404));
   }
 
-  // 3) Generate the random reset token
+  // 2) Generate the random reset token
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  // 4) Send it to user's email
-  const resetURL = `${req.protocol}://${req.get(
-    "host",
-  )}/api/v1/users/resetPassword/${resetToken}`;
+  // 3) Send it to user's email
+  try {
+    const resetURL = `${req.protocol}://${req.get(
+      "host",
+    )}/api/v1/users/resetPassword/${resetToken}`;
+    await new Email(user, resetURL).sendPasswordReset();
 
-  const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
+    res.status(200).json({
+      status: "success",
+      message: "Token sent to email!",
+    });
+  } catch (err) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
 
-  await sendEmail({
-    email: user.email,
-    subject: "Your password reset token (valid for 10 min)",
-    message,
-  });
-
-  res.status(200).json({
-    status: httpStatus.SUCCESS,
-    message: "Token sent to email!",
-  });
-});
+    return next(
+      AppError.create("There was an error sending the email. Try again later!"),
+      500,
+    );
+  }
+};
 
 const resetPassword = asyncHandler(async (req, res, next) => {
   // 1) Get use based on token
@@ -157,17 +194,7 @@ const resetPassword = asyncHandler(async (req, res, next) => {
 
   await user.save();
 
-  const token = await user.createJWT();
-
-  res.cookie("jwt", token, cookieOptions);
-
-  return res.status(200).json({
-    status: httpStatus.SUCCESS,
-    token: token,
-    data: {
-      user: user,
-    },
-  });
+  createSendToken(user, 200, res);
 });
 
 // for logged in Users
@@ -194,61 +221,60 @@ const updatePassword = asyncHandler(async (req, res, next) => {
 
   await user.save();
 
-  const token = await user.createJWT();
-
-  res.cookie("jwt", token, cookieOptions);
-
-  return res.status(200).json({
-    status: httpStatus.SUCCESS,
-    token: token,
-  });
+  createSendToken(user, 200, res);
 });
 
 const isLoggedIn = asyncHandler(async (req, res, next) => {
-  console.log('[isLoggedIn] Middleware started');
+  console.log("[isLoggedIn] Middleware started");
   if (req.cookies.jwt) {
-    console.log('[isLoggedIn] JWT cookie found, verifying...');
+    console.log("[isLoggedIn] JWT cookie found, verifying...");
     try {
       // 1) verify token
       const decoded = await promisify(jwt.verify)(
         req.cookies.jwt,
         process.env.JWT_SECRET,
       );
-      console.log('[isLoggedIn] JWT verified successfully');
+      console.log("[isLoggedIn] JWT verified successfully");
 
       // 2) Check if user still exists
       const currentUser = await User.findById(decoded.id);
-      console.log(`[isLoggedIn] User lookup completed: ${currentUser ? currentUser.name : 'Not found'}`);
+      console.log(
+        `[isLoggedIn] User lookup completed: ${currentUser ? currentUser.name : "Not found"}`,
+      );
       if (!currentUser) {
-        console.log('[isLoggedIn] User not found, proceeding without auth');
+        console.log("[isLoggedIn] User not found, proceeding without auth");
         return next();
       }
 
       // 3) Check if user changed password after the token was issued
       if (currentUser.changedPasswordAfter(decoded.iat)) {
-        console.log('[isLoggedIn] User changed password, proceeding without auth');
+        console.log(
+          "[isLoggedIn] User changed password, proceeding without auth",
+        );
         return next();
       }
 
       // THERE IS A LOGGED IN USER
-      console.log(`[isLoggedIn] Setting res.locals.user to ${currentUser.name}`);
+      console.log(
+        `[isLoggedIn] Setting res.locals.user to ${currentUser.name}`,
+      );
       res.locals.user = currentUser;
       return next();
     } catch (err) {
-      console.log('[isLoggedIn] JWT verification error:', err.message);
+      console.log("[isLoggedIn] JWT verification error:", err.message);
       return next();
     }
   }
-  console.log('[isLoggedIn] No JWT cookie found, proceeding');
+  console.log("[isLoggedIn] No JWT cookie found, proceeding");
   next();
 });
 
 module.exports = {
-  register,
+  signup,
   login,
   forgotPassword,
   resetPassword,
   updatePassword,
   isLoggedIn,
-  logout
+  logout,
 };
