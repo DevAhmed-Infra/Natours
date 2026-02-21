@@ -69,11 +69,7 @@ app.get("/test", (req, res) => {
   res.send("OK - Server is responding");
 });
 
-// Health check for templates
-app.get("/health", (req, res) => {
-  console.log("Health check route hit");
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+
 
 app.use("/", viewRouter);
 app.use("/api/v1/tours", tourRouter);
