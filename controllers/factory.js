@@ -8,8 +8,8 @@ const deleteOne = (Model) =>
     const doc = await Model.findByIdAndDelete(req.params.id);
 
     if (!doc) {
-        const errors = AppError.create("No document found with that ID", 404);
-        return next(errors)
+      const errors = AppError.create("No document found with that ID", 404);
+      return next(errors);
     }
 
     res.status(204).json({
@@ -57,7 +57,7 @@ const getOne = (Model, popOptions) =>
     const doc = await query;
 
     if (!doc) {
-      const errors = AppError.create(`there is no doc`, 404);
+      const errors = AppError.create("No document found with that ID", 404);
       return next(errors);
     }
 
@@ -88,7 +88,7 @@ const getAll = (Model) =>
     const doc = await features.query;
 
     if (!doc || doc.length === 0) {
-      const error = AppError.create(`there is no docs`, 404);
+      const error = AppError.create("No documents found", 404);
       return next(error);
     }
 

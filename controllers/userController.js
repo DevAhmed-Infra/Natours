@@ -55,6 +55,10 @@ const getMe = (req, res, next) => {
 };
 
 const updateMe = asyncHandler(async (req, res, next) => {
+  console.log("[updateMe] ===== REQUEST START =====");
+  console.log("[updateMe] req.file:", req.file);
+  console.log("[updateMe] req.body:", req.body);
+
   // 1️ Block password updates
   if (req.body.password || req.body.passwordConfirm) {
     const errors = AppError.create(
@@ -85,6 +89,9 @@ const updateMe = asyncHandler(async (req, res, next) => {
 
   // 6️ Save (runs validators & hooks)
   await user.save({ validateBeforeSave: false });
+
+  console.log("[updateMe] User photo after save:", user.photo);
+  console.log("[updateMe] ===== REQUEST END =====");
 
   res.status(200).json({
     status: httpStatus.SUCCESS,
@@ -175,5 +182,5 @@ module.exports = {
   getMe,
   createUserByAdmin,
   uploadUserPhoto,
-  resizeUserPhoto
+  resizeUserPhoto,
 };

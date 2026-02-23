@@ -37,7 +37,7 @@ block content
         .overview-box__group
           h2.heading-secondary.ma-bt-lg Quick facts
 
-          - const date = tour.startDates[0].toLocaleString('en-us', {month: 'long', year: 'numeric'})
+          - const date = tour.startDates && tour.startDates.length > 0 ? new Date(tour.startDates[0]).toLocaleString('en-us', {month: 'long', year: 'numeric'}) : 'Dates TBD'
           +overviewBox('Next date', date, 'calendar')
           +overviewBox('Difficulty', tour.difficulty, 'trending-up')
           +overviewBox('Participants', `${tour.maxGroupSize} people`, 'user')
@@ -68,7 +68,8 @@ block content
         img.picture-box__img(src=`/img/tours/${img}`, alt=`The Park Camper Tour ${i + 1}`, class=`picture-box__img--${i + 1}`)
 
   section.section-map
-    #map(data-locations=`${JSON.stringify(tour.locations)}`)
+    - const locations = tour.locations || [];
+    #map(data-locations=`${JSON.stringify(locations)}`)
 
   section.section-reviews
     .reviews

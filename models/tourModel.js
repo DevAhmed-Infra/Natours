@@ -97,6 +97,19 @@ const tourSchema = new mongoose.Schema(
       description: String,
       day: Number,
     },
+    locations: [
+      {
+        type: {
+          type: String,
+          default: "Point",
+          enum: ["Point"],
+        },
+        coordinates: [Number],
+        address: String,
+        description: String,
+        day: Number,
+      },
+    ],
     guides: [
       {
         type: mongoose.Schema.ObjectId,
@@ -114,6 +127,7 @@ const tourSchema = new mongoose.Schema(
 tourSchema.index({ price: 1, ratingsAverage: -1 });
 tourSchema.index({ slug: 1 });
 tourSchema.index({ startLocation: "2dsphere" });
+tourSchema.index({ "locations.coordinates": "2dsphere" });
 
 tourSchema.virtual("durationWeeks").get(function () {
   return this.duration / 7;

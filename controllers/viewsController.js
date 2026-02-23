@@ -5,37 +5,12 @@ const asyncHandler = require("express-async-handler");
 const AppError = require("../utils/appError");
 
 const getOverview = asyncHandler(async (req, res, next) => {
-  console.log("[getOverview] ===== REQUEST START =====");
-  console.log("[getOverview] Fetching tours from database...");
+  const tours = await Tour.find();
 
-  let tours = [];
-  try {
-    tours = await Tour.find();
-    console.log(
-      `[getOverview] ✓ Query success: Found ${tours ? tours.length : 0} tours`,
-    );
-  } catch (err) {
-    console.error("[getOverview] ✗ Query failed:", err.message);
-    tours = [];
-  }
-
-  console.log("[getOverview] Rendering overview template with tours data...");
-  console.log(
-    `[getOverview] Data being passed: { title: 'All Tours', tours: Array(${tours.length}) }`,
-  );
-
-  try {
-    res.status(200).render("overview", {
-      title: "All Tours",
-      tours: tours || [],
-    });
-    console.log("[getOverview] ✓ Template rendered successfully");
-  } catch (err) {
-    console.error("[getOverview] ✗ Render failed:", err.message);
-    return next(err);
-  }
-
-  console.log("[getOverview] ===== REQUEST END =====\n");
+  res.status(200).render("overview", {
+    title: "All Tours",
+    tours,
+  });
 });
 
 const getTour = asyncHandler(async (req, res, next) => {
@@ -100,14 +75,21 @@ const getLoginForm = (req, res) => {
 const getAccount = (req, res) => {
   console.log("[getAccount] ===== REQUEST START =====");
   console.log(
-    `[getAccount] User logged in: ${req.user ? req.user.name : "No user"}`,
+    `[getAccount] User logged in: ${res.locals.user ? res.locals.user.name : "No user"}`,
   );
+
+  // If user is not logged in, redirect to login
+  if (!res.locals.user) {
+    console.log("[getAccount] No user found, redirecting to login");
+    return res.redirect("/login");
+  }
+
   console.log("[getAccount] Rendering account template...");
 
   try {
     res.status(200).render("account", {
       title: "Your account",
-      user: req.user || null,
+      user: res.locals.user,
     });
     console.log("[getAccount] ✓ Template rendered successfully");
   } catch (err) {

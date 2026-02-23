@@ -52,8 +52,10 @@ const signup = asyncHandler(async (req, res, next) => {
 
   user.password = undefined;
 
-  const url = `${req.protocol}://${req.get("host")}/me`;
+  const url = `${req.protocol}://${req.get("host")}/login`;
   console.log(url);
+
+  // Send welcome email
   await new Email(user, url).sendWelcome();
 
   createSendToken(user, 201, res);
@@ -95,47 +97,13 @@ const logout = (req, res) => {
   res.status(200).json({ status: httpStatus.SUCCESS });
 };
 
-// const forgotPassword = asyncHandler(async (req, res, next) => {
-//   // 1) Validate email is provided
-//   if (!req.body.email) {
-//     const errors = AppError.create("Please provide an email address.", 400);
-//     return next(errors);
-//   }
-
-//   // 2) Get user based on POSTed email (with lowercase for case-insensitive matching)
-//   const user = await User.findOne({ email: req.body.email.toLowerCase() });
-
-//   if (!user) {
-//     const errors = AppError.create("There is no user with email address.", 404);
-//     return next(errors);
-//   }
-
-//   // 3) Generate the random reset token
-//   const resetToken = user.createPasswordResetToken();
-//   await user.save({ validateBeforeSave: false });
-
-//   // 4) Send it to user's email
-//   const resetURL = `${req.protocol}://${req.get(
-//     "host",
-//   )}/api/v1/users/resetPassword/${resetToken}`;
-
-//   const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
-
-//   // await sendEmail({
-//   //   email: user.email,
-//   //   subject: "Your password reset token (valid for 10 min)",
-//   //   message,
-//   // });
-
-//   res.status(200).json({
-//     status: httpStatus.SUCCESS,
-//     message: "Token sent to email!",
-//   });
-// });
-
-const forgotPassword = async (req, res, next) => {
+const forgotPassword = asyncHandler(async (req, res, next) => {
   // 1) Get user based on POSTed email
-  const user = await User.findOne({ email: req.body.email });
+  if (!req.body.email) {
+    return next(AppError.create("Please provide an email address.", 400));
+  }
+
+  const user = await User.findOne({ email: req.body.email.toLowerCase() });
   if (!user) {
     return next(AppError.create("There is no user with email address.", 404));
   }
@@ -161,11 +129,13 @@ const forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     return next(
-      AppError.create("There was an error sending the email. Try again later!"),
-      500,
+      AppError.create(
+        "There was an error sending the email. Try again later!",
+        500,
+      ),
     );
   }
-};
+});
 
 const resetPassword = asyncHandler(async (req, res, next) => {
   // 1) Get use based on token

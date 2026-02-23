@@ -1,5 +1,6 @@
 /* eslint-disable */
 export const displayMap = locations => {
+  // Note: Replace with your actual Mapbox token from environment
   mapboxgl.accessToken =
     'YOUR_MAPBOX_TOKEN';
 

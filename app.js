@@ -7,6 +7,8 @@ const { xss } = require("express-xss-sanitizer");
 const hpp = require("hpp");
 const path = require("path");
 const cookieParser = require("cookie-parser");
+const compression = require("compression");
+const cors = require("cors");
 
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
@@ -23,7 +25,61 @@ app.set("view engine", "pug");
 app.set("views", path.join(__dirname, "views"));
 
 app.use(express.static(path.join(__dirname, "public")));
-app.use(helmet());
+
+// CORS middleware
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
+// Compress responses
+app.use(compression());
+
+// Security middleware
+if (process.env.NODE_ENV === "development") {
+  // More permissive CSP for development
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Disable CSP in development for easier testing
+    }),
+  );
+} else {
+  // Strict CSP for production
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          fontSrc: ["'self'", "https:", "data:"],
+          formAction: ["'self'"],
+          frameAncestors: ["'self'"],
+          frameSrc: ["'self'", "https://js.stripe.com"],
+          imgSrc: ["'self'", "data:"],
+          objectSrc: ["'none'"],
+          scriptSrc: [
+            "'self'",
+            "https://js.stripe.com",
+            "https://cdn.jsdelivr.net",
+          ],
+          scriptSrcAttr: ["'none'"],
+          styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+          connectSrc: [
+            "'self'",
+            "https://js.stripe.com",
+            "https://api.stripe.com",
+          ],
+          workerSrc: ["'self'"],
+          upgradeInsecureRequests: [],
+        },
+      },
+    }),
+  );
+}
 
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));

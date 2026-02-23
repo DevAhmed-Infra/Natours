@@ -7,12 +7,17 @@ const User = require("../models/userModel");
 const verifyToken = asyncHandler(async (req, res, next) => {
   let token;
 
-  // 1) Get the token
+  // 1) Get the token from Authorization header (for API calls)
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
+  }
+
+  // 2) If no header token, check for cookie (for web requests)
+  if (!token && req.cookies.jwt) {
+    token = req.cookies.jwt;
   }
 
   if (!token) {
@@ -21,11 +26,9 @@ const verifyToken = asyncHandler(async (req, res, next) => {
   }
 
   // 2) verify that token
-
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
   // 3) check if user is still existed or not
-
   const currentUser = await User.findById(decoded.id);
 
   if (!currentUser) {
@@ -34,7 +37,6 @@ const verifyToken = asyncHandler(async (req, res, next) => {
   }
 
   // 4) check whether user changed their password or not
-
   if (currentUser.changedPasswordAfter(decoded.iat)) {
     const errors = AppError.create("User changed the password", 401);
     return next(errors);

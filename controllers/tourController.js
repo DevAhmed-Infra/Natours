@@ -220,7 +220,7 @@ const getToursWithin = asyncHandler(async (req, res, next) => {
 
   if (!lat || !lng) {
     const errors = AppError.create(
-      "Please provide latitutr and longitude in the format lat,lng.",
+      "Please provide latitude and longitude in the format lat,lng.",
       400,
     );
     return next(errors);
@@ -247,7 +247,7 @@ const getDistances = asyncHandler(async (req, res, next) => {
 
   if (!lat || !lng) {
     const errors = AppError.create(
-      "Please provide latitutr and longitude in the format lat,lng.",
+      "Please provide latitude and longitude in the format lat,lng.",
       400,
     );
     return next(errors);

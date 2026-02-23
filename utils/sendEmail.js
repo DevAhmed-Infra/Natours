@@ -55,19 +55,66 @@ class Email {
     this.to = user.email;
     this.firstName = user.name.split(" ")[0];
     this.url = url;
-    this.from = `Ahmed Arafa <${process.env.EMAIL_USER}>`;
+    this.from = `Ahmed Arafa <${process.env.EMAIL_USER || "noreply@natours.io"}>`;
   }
 
   newTransport() {
-    return nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-      logger: true,
-      debug: true,
-    });
+    // For development, if no email credentials are set, use Ethereal
+    if (
+      process.env.NODE_ENV === "development" &&
+      (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD)
+    ) {
+      console.log("📧 Development mode: Creating Ethereal test account...");
+
+      // Return a promise that resolves to a transport with test account
+      return nodemailer.createTestAccount().then((testAccount) => {
+        console.log("✅ Ethereal test account created");
+        console.log(`   Email: ${testAccount.user}`);
+        console.log(`   Password: ${testAccount.pass}`);
+
+        const transport = nodemailer.createTransport({
+          host: testAccount.smtp.host,
+          port: testAccount.smtp.port,
+          secure: testAccount.smtp.secure,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+
+        // Store the test account for preview URL
+        this.testAccount = testAccount;
+        return transport;
+      });
+    }
+
+    // Validate credentials for production
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+
+    if (!emailUser || !emailPass) {
+      console.error("Missing email credentials!");
+      console.error("EMAIL_USER:", emailUser ? "SET" : "NOT SET");
+      console.error(
+        "EMAIL_PASSWORD/EMAIL_PASS:",
+        emailPass ? "SET" : "NOT SET",
+      );
+      throw new Error(
+        "Email configuration incomplete. Check EMAIL_USER and EMAIL_PASSWORD in config.env",
+      );
+    }
+
+    return Promise.resolve(
+      nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: emailUser,
+          pass: emailPass,
+        },
+        logger: process.env.NODE_ENV === "development",
+        debug: process.env.NODE_ENV === "development",
+      }),
+    );
   }
 
   // Send the actual email
@@ -85,11 +132,20 @@ class Email {
       to: this.to,
       subject,
       html,
-      text: htmlToText.fromString(html),
+      text: htmlToText.convert(html),
     };
 
     // 3) Create a transport and send email
-    await this.newTransport().sendMail(mailOptions);
+    const transport = await this.newTransport();
+    const info = await transport.sendMail(mailOptions);
+
+    // Log preview URL for Ethereal in development
+    if (process.env.NODE_ENV === "development" && this.testAccount) {
+      console.log("📧 Email preview URL:", nodemailer.getTestMessageUrl(info));
+      console.log("🌐 View emails at: https://ethereal.email/messages");
+    }
+
+    return info;
   }
 
   async sendWelcome() {
@@ -102,6 +158,6 @@ class Email {
       "Your password reset token (valid for only 10 minutes)",
     );
   }
-};
+}
 
 module.exports = Email;

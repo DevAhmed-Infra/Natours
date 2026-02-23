@@ -1,7 +1,10 @@
 /* eslint-disable */
 import axios from 'axios';
 import { showAlert } from './alerts';
-const stripe = Stripe('pk_test_51SMTjw2V9G6KvtY4PjQ93AnfBiIhMKHyfvkOJRFezwESbKwqWXuM9eDhhQ7ymCILslEANs0OIp5vrcXoIbiMjjMz00nTQVznGh');
+
+// NOTE: The Stripe public key should be loaded from the server
+// For now this is hardcoded, but in production should be fetched from backend
+const stripe = Stripe(document.currentScript?.dataset?.stripeKey || 'pk_test_51SMTjw2V9G6KvtY4PjQ93AnfBiIhMKHyfvkOJRFezwESbKwqWXuM9eDhhQ7ymCILslEANs0OIp5vrcXoIbiMjjMz00nTQVznGh');
 
 export const bookTour = async tourId => {
   try {
@@ -11,7 +14,7 @@ export const bookTour = async tourId => {
     );
     console.log(session);
 
-    // 2) Create checkout form + chanre credit card
+    // 2) Create checkout form + charge credit card
     await stripe.redirectToCheckout({
       sessionId: session.data.session.id
     });
