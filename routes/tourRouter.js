@@ -31,11 +31,15 @@ router
 // /tours-within/233/center/-40,45/unit/mi
 
 router.route("/distances/:latlng/unit/:unit").get(tourController.getDistances);
+
+// Public routes (no authentication required)
+router.route("/").get(tourController.getAllTours);
+router.route("/:id").get(tourController.getTour);
+
 // Protect all routes below this middleware
 router.use(verifyToken);
 router
   .route("/")
-  .get(tourController.getAllTours)
   .post(
     restrictedTo("admin", "lead-guide"),
     tourController.createTour,
@@ -43,7 +47,6 @@ router
 
 router
   .route("/:id")
-  .get(tourController.getTour)
   .patch(
     restrictedTo("admin", "lead-guide"),
     tourController.uploadTourImages,
