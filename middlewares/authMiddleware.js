@@ -7,7 +7,7 @@ const User = require("../models/userModel");
 const verifyToken = asyncHandler(async (req, res, next) => {
   let token;
 
-  // 1) Get the token from Authorization header (for API calls)
+  // 1) Get token from Authorization header (for API calls)
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
@@ -25,10 +25,10 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     return next(errors);
   }
 
-  // 2) verify that token
+  // 3) verify that token
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-  // 3) check if user is still existed or not
+  // 4) check if user is still existed or not
   const currentUser = await User.findById(decoded.id);
 
   if (!currentUser) {
@@ -36,13 +36,20 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     return next(errors);
   }
 
-  // 4) check whether user changed their password or not
+  // 5) check whether user changed their password or not
   if (currentUser.changedPasswordAfter(decoded.iat)) {
     const errors = AppError.create("User changed the password", 401);
     return next(errors);
   }
 
+  // 6) Grant access to protected route
   req.user = currentUser;
+  console.log(
+    "[verifyToken] User authenticated:",
+    currentUser.name,
+    "Role:",
+    currentUser.role,
+  );
   next();
 });
 

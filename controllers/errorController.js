@@ -13,9 +13,13 @@ const handleDuplicateFieldsDB = (err) => {
     const message = `Duplicate field value: ${value}. Please use another value!`;
     return AppError.create(message, 400);
   } catch (e) {
-    return AppError.create("Duplicate entry found. Please use another value!", 400);
+    return AppError.create(
+      "Duplicate entry found. Please use another value!",
+      400,
+    );
   }
 };
+
 const handleValidationErrorDB = (err) => {
   const errors = Object.values(err.errors).map((el) => el.message);
 
@@ -59,7 +63,7 @@ const globalErrorHandler = (err, req, res, next) => {
   err.status = err.status || httpStatus.ERROR;
 
   if (process.env.NODE_ENV === "development") {
-    let error = { ...err };
+    let error = err;
 
     if (error.name === "CastError") error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
@@ -71,7 +75,7 @@ const globalErrorHandler = (err, req, res, next) => {
 
     sendErrorDev(error, res);
   } else if (process.env.NODE_ENV === "production") {
-    let error = { ...err };
+    let error = err;
 
     if (error.name === "CastError") error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);

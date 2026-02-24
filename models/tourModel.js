@@ -141,7 +141,7 @@ tourSchema.virtual("reviews", {
 });
 
 // DOCUMENT MIDDLEWARE: runs before .save() and .create()
-tourSchema.pre("save", function (next) {
+tourSchema.pre("save", function () {
   this.slug = slugify(this.name, { lower: true });
 });
 
@@ -153,19 +153,39 @@ tourSchema.pre("save", function (next) {
 //   this.guides = await Promise.all(guidesPromises);
 // });
 
-// tourSchema.pre('save', function(next) {
-//   console.log('Will save document...');
-//   next();
-// });
+// DOCUMENT MIDDLEWARE
+tourSchema.pre("save", function () {
+  // Handle missing startLocation for new tours
+  if (this.isNew) {
+    if (!this.startLocation || !this.startLocation.coordinates) {
+      const err = new Error(
+        "Tour must have a startLocation with coordinates array",
+      );
+      err.statusCode = 400;
+      throw err;
+    }
 
-// tourSchema.post('save', function(doc, next) {
-//   console.log(doc);
-//   next();
-// });
+    // Ensure coordinates is an array
+    if (!Array.isArray(this.startLocation.coordinates)) {
+      const err = new Error("startLocation.coordinates must be an array");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Ensure coordinates array has at least 2 elements [longitude, latitude]
+    if (this.startLocation.coordinates.length < 2) {
+      const err = new Error(
+        "startLocation.coordinates must contain [longitude, latitude]",
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+});
 
 // QUERY MIDDLEWARE
 
-tourSchema.pre(/^find/, function (next) {
+tourSchema.pre(/^find/, function () {
   this.find({ secretTour: { $ne: true } });
   this.populate({
     path: "guides",
@@ -179,7 +199,7 @@ tourSchema.post(/^find/, async function (docs) {
 });
 
 // AGGREGATION MIDDLEWARE
-tourSchema.pre("aggregate", function (next) {
+tourSchema.pre("aggregate", function () {
   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
   console.log(this.pipeline());
 });

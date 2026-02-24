@@ -87,11 +87,6 @@ const getAll = (Model) =>
 
     const doc = await features.query;
 
-    if (!doc || doc.length === 0) {
-      const error = AppError.create("No documents found", 404);
-      return next(error);
-    }
-
     res.status(200).json({
       status: httpStatus.SUCCESS,
       results: doc.length,

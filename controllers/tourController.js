@@ -7,7 +7,6 @@ const httpStatus = require("../utils/httpStatus");
 const AppError = require("../utils/appError");
 const factory = require("./factory");
 
-
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
@@ -24,18 +23,18 @@ const upload = multer({
 });
 
 const uploadTourImages = upload.fields([
-  { name: 'imageCover', maxCount: 1 },
-  { name: 'images', maxCount: 3 }
+  { name: "imageCover", maxCount: 1 },
+  { name: "images", maxCount: 3 },
 ]);
 
 const resizeTourImages = asyncHandler(async (req, res, next) => {
-  if (!req.files.imageCover || !req.files.images) return next();
+  if (!req.files || !req.files.imageCover || !req.files.images) return next();
 
   // 1) Cover image
   req.body.imageCover = `tour-${req.params.id}-${Date.now()}-cover.jpeg`;
   await sharp(req.files.imageCover[0].buffer)
     .resize(2000, 1333)
-    .toFormat('jpeg')
+    .toFormat("jpeg")
     .jpeg({ quality: 90 })
     .toFile(`public/img/tours/${req.body.imageCover}`);
 
@@ -48,12 +47,12 @@ const resizeTourImages = asyncHandler(async (req, res, next) => {
 
       await sharp(file.buffer)
         .resize(2000, 1333)
-        .toFormat('jpeg')
+        .toFormat("jpeg")
         .jpeg({ quality: 90 })
         .toFile(`public/img/tours/${filename}`);
 
       req.body.images.push(filename);
-    })
+    }),
   );
 
   next();
@@ -129,11 +128,11 @@ const getAllTours = factory.getAll(Tour);
 
 const getTour = factory.getOne(Tour, { path: "reviews" });
 
-const createTour = factory.createOne(Tour);
-
 const updateTour = factory.updateOne(Tour);
 
 const deleteTour = factory.deleteOne(Tour);
+
+const createTour = factory.createOne(Tour);
 
 const getTourStats = asyncHandler(async (req, res, next) => {
   const stats = await Tour.aggregate([
@@ -292,5 +291,5 @@ module.exports = {
   getDistances,
   getToursWithin,
   uploadTourImages,
-  resizeTourImages
+  resizeTourImages,
 };

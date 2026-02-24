@@ -53,9 +53,6 @@ router
     tourController.resizeTourImages,
     tourController.updateTour,
   )
-  .delete(
-    restrictedTo("admin", "lead-guide"),
-    tourController.deleteTour,
-  );
+  .delete(restrictedTo("admin", "lead-guide"), tourController.deleteTour);
 
 module.exports = router;

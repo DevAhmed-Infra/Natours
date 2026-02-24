@@ -4,7 +4,7 @@ class AppError extends Error {
   constructor(message, statusCode) {
     super(message);
     this.statusCode = statusCode;
-    this.statusText = `${statusCode}`.startsWith("4")
+    this.status = `${statusCode}`.startsWith("4")
       ? httpStatus.FAIL
       : httpStatus.ERROR;
     this.isOperational = true;
